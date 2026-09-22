@@ -129,8 +129,9 @@ vmlinux_link()
 
 	if [ "${SRCARCH}" != "um" ]; then
 		if [ -n "${CONFIG_LTO_CLANG}" ]; then
-			# 已经做过 LTO 的部分链接，这里只喂 vmlinux.o，
-			# 否则每个 .tmp_vmlinuxN Pass 都会把全部 IR 重编一遍
+			# The LTO partial link already happened, so feed only
+			# vmlinux.o here - otherwise every .tmp_vmlinuxN pass would
+			# recompile the entire IR.
 			objects="--start-group			\
 				vmlinux.o			\
 				--end-group			\

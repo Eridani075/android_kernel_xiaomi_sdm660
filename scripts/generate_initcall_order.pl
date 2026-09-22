@@ -5,9 +5,8 @@
 #
 # Copyright (C) 2019 Google LLC
 #
-# 本项目移植来源：kernels/xiaomi-4.19/scripts/generate_initcall_order.pl（原样复制，
-# 2026-09-21 做 4.19 -> 4.4 同族 kbuild 回移时引入）。归属与改动清单见
-# docs/PROJECT-MEMORY.md 的 §5.6 / §5.8。
+# Backported verbatim from the 4.19 msm kernel tree of the same product line as
+# part of a 4.19 -> 4.4 same-family kbuild backport; no code changes.
 
 use strict;
 use warnings;

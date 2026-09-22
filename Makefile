@@ -788,7 +788,8 @@ endif
 KBUILD_CFLAGS += $(call cc-disable-warning, unused-but-set-variable)
 
 ifdef CONFIG_LTO_CLANG
-# 4.4 原本不给链接阶段传 -O3，这里只在 LTO 时加，避免动到非 LTO 的已知可用构建
+# 4.4 never passes -O3 to the link step; add it only under LTO so the known-good
+# non-LTO link path stays byte-for-byte untouched.
 LDFLAGS += -O3 --lto-O3
 endif
 
@@ -859,14 +860,14 @@ KBUILD_CFLAGS += $(call cc-option, -fno-inline-functions-called-once)
 endif
 
 ifdef CONFIG_LTO_CLANG
-# 4.4 的 Kconfig 没有预处理器，也没有 CC_IS_CLANG / LD_IS_LLD 这两个符号
-# （4.19 是靠它们在 menu 里限制 LTO 的），所以这里在 Makefile 里把关。
+# 4.4's Kconfig has no preprocessor and defines neither CC_IS_CLANG nor LD_IS_LLD
+# (4.19 uses those two symbols to gate LTO in the menu), so gate it here instead.
 ifeq ($(cc-name),clang)
 ifeq ($(shell $(LD) --version 2>/dev/null | grep -c LLD),0)
-$(error CONFIG_LTO_CLANG 需要 ld.lld：请用 make LLVM=1 LLVM_IAS=1 ...)
+$(error CONFIG_LTO_CLANG requires ld.lld: build with make LLVM=1 LLVM_IAS=1 ...)
 endif
 else
-$(error CONFIG_LTO_CLANG 需要 clang：请用 make LLVM=1 LLVM_IAS=1 ...)
+$(error CONFIG_LTO_CLANG requires clang: build with make LLVM=1 LLVM_IAS=1 ...)
 endif
 
 ifdef CONFIG_THINLTO
@@ -883,7 +884,8 @@ LD_FLAGS_LTO_CLANG := -mllvm -import-instr-limit=5
 LDFLAGS += $(LD_FLAGS_LTO_CLANG)
 KBUILD_LDFLAGS_MODULE += $(LD_FLAGS_LTO_CLANG)
 
-# 把 -fdata/-ffunction-sections 切出来的段合回去（见 scripts/module-lto.lds.S）
+# Merge back the sections split out by -fdata/-ffunction-sections
+# (see scripts/module-lto.lds.S).
 KBUILD_LDFLAGS_MODULE += -T scripts/module-lto.lds
 
 # allow disabling only clang LTO where needed

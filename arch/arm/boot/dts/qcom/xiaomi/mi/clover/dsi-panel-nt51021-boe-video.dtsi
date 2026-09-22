@@ -17,7 +17,8 @@
 		qcom,mdss-dsi-panel-controller = <&mdss_dsi0>;
 		qcom,mdss-dsi-panel-type = "dsi_video_mode";
 		qcom,mdss-dsi-panel-destination = "display_1";
-		/* 80Hz 是不动 porch 的上限：VCO = 2 x bitclk = 2.565GHz，离 2.6GHz 上限只剩 1.4% */
+		/* 80Hz is the highest rate without shrinking the porches:
+		 * VCO = 2 x bitclk = 2.565GHz, 1.4% below the 2.6GHz limit */
 		qcom,mdss-dsi-panel-framerate = <80>;
 		qcom,mdss-dsi-virtual-channel-id = <0>;
 		qcom,mdss-dsi-stream = <0>;

@@ -1273,12 +1273,15 @@
 			<  1536000000 0x04040050 0x08400040 0x2 6 >,
 			<  1747200000 0x0404005b 0x09480048 0x2 7 >,
 			<  1843200000 0x04040060 0x094c004c 0x3 8 >,
-			/* 超频到 2.15 / 2.208 GHz：freq_data 与 override_data 原样取自
-			 * 本文件大核（perfcl）同频的原厂行，只把电压角改成小核的最高角 8。
-			 * spare 必须跟上一行一样是 0x3 —— 相邻两行若"同角不同 spare"，
-			 * clk-cpu-osm.c:1554 会判 invalid LUT 直接 -EINVAL，CPUfreq 整个起不来。
-			 * 角 8 的电压上限 1068mV 与大核顶角一致（sdm660-regulator.dtsi 的
-			 * cpr-voltage-ceiling），所以这已是小核能拿到的最高压。 */
+			/* Overclock to 2.15 / 2.208 GHz: freq_data and override_data are
+			 * copied verbatim from this file's perf cluster (perfcl) stock rows
+			 * for the same frequencies; only the voltage corner becomes the pwr
+			 * cluster's top corner 8. spare must match the previous row (0x3):
+			 * clk-cpu-osm.c:1554 rejects neighbouring rows that share a corner
+			 * but differ in spare, which fails cpufreq init outright. Corner 8
+			 * caps at the same 1068mV as perfcl's top corner
+			 * (qcom,cpr-voltage-ceiling in sdm660-regulator.dtsi), so this is
+			 * already the most voltage the LIT cluster can be given. */
 			<  2150400000 0x04040070 0x0b590059 0x3 8 >,
 			<  2208000000 0x04040073 0x0b5c005c 0x3 8 >;
 
@@ -1318,9 +1321,12 @@
 			<  1958400000 0x04040066 0x0a510051 0x2 5 >,
 			<  2150400000 0x04040070 0x0b590059 0x2 6 >,
 			<  2208000000 0x04040073 0x0b5c005c 0x3 7 >,
-			/* 超频：2.4576GHz。整行照抄本文件 perfcl-speedbin0 的原厂行，
-			 * 电压角仍是 7（该簇最高角），所以 CPR/regulator 表不用动。
-			 * cpufreq-table-4 本来就有 2457600，缺的只是这一行 LUT。 */
+			/* Overclock: 2.4576 GHz. The whole row is copied verbatim from
+			 * perfcl-speedbin0 in this same file - a real stock row for a
+			 * higher fuse setting - so the corner stays 7 (that cluster's
+			 * top) and no CPR/regulator table has to change.
+			 * cpufreq-table-4 already listed 2457600; this LUT row was all
+			 * that was missing. */
 			<  2457600000 0x04040080 0x0c660066 0x3 7 >;
 
 		qcom,perfcl-speedbin3-v0 =

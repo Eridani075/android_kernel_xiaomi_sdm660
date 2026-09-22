@@ -1,8 +1,8 @@
 /* SPDX-License-Identifier: GPL-2.0 */
 /*
- * 本项目移植来源：kernels/xiaomi-4.19/scripts/module-lto.lds.S（原样复制，2026-09-21
- * 做 4.19 -> 4.4 同族 kbuild 回移时引入）。只在 CONFIG_LTO_CLANG 下参与 .ko 链接。
- * 归属与改动清单见 docs/PROJECT-MEMORY.md 的 §5.6 / §5.8。
+ * Backported verbatim from the 4.19 msm kernel tree of the same product line as
+ * part of a 4.19 -> 4.4 same-family kbuild backport. Only participates in .ko
+ * links when CONFIG_LTO_CLANG is set.
  */
 #include <asm/page.h>
 
@@ -36,8 +36,9 @@ SECTIONS {
 	}
 
 	/*
-	 * 4.19 原版这里带 CFI：`ALIGN(PAGE_SIZE)` + `.text.__cfi_check`。
-	 * 本项目没有 CFI，去掉对齐和 cfi 段，只保留"把切分出来的 .text.* 合回去"。
+	 * The 4.19 original also carried CFI here: ALIGN(PAGE_SIZE) plus
+	 * .text.__cfi_check. This tree has no CFI, so the alignment and the cfi
+	 * section are dropped and only "merge the split-out .text.* back" is kept.
 	 */
 	.text : {
 		*(.text .text.[0-9a-zA-Z_]*)

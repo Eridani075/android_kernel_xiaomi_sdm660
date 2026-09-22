@@ -212,9 +212,10 @@
  * requirements. Same for bss.
  */
 /*
- * LTO（-fdata/-ffunction-sections 总是开）会把 .data/.bss/.text 切成一个个带
- * 后缀的段，需要额外的通配符收回去。非 LTO 构建不需要这些，而且加了会扰动
- * 已经实机验证过的那条链接路径，所以只在 CONFIG_LTO_CLANG 下生效。
+ * With LTO, -fdata/-ffunction-sections are always on, so .data/.bss/.text get
+ * split into suffixed sections that need extra wildcards to collect again.
+ * Non-LTO builds do not want these - they would perturb the link path already
+ * verified on real hardware - so all of it stays under CONFIG_LTO_CLANG.
  */
 #ifdef CONFIG_LTO_CLANG
 #define LTO_DATA_EXTRA	*(.data..L* .data..compoundliteral*)
