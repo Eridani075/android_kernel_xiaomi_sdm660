@@ -987,6 +987,18 @@ config CGROUP_FREEZER
 	  Provides a way to freeze and unfreeze all tasks in a
 	  cgroup.
 
+config CGROUP_FREEZE
+	bool "cgroup.freeze interface on the default hierarchy"
+	depends on CGROUPS
+	help
+	  Provides a per-cgroup freeze interface (the "cgroup.freeze" file
+	  and the "frozen" state in "cgroup.events") on the unified
+	  hierarchy.  Freezing is tracked in the kernel per task, so unlike
+	  the legacy freezer cgroup subsystem a cgroup can be frozen while
+	  its controllers stay online.
+
+	  Say N if unsure.
+
 config CGROUP_PIDS
 	bool "PIDs cgroup subsystem"
 	help

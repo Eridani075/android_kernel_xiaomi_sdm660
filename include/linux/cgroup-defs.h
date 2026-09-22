@@ -60,6 +60,12 @@ enum {
 	 * specified at mount time and thus is implemented here.
 	 */
 	CGRP_CPUSET_CLONE_CHILDREN,
+
+	/* Control group has to be frozen. */
+	CGRP_FREEZE,
+
+	/* Cgroup is frozen. */
+	CGRP_FROZEN,
 };
 
 /* cgroup_root->flags */
@@ -182,6 +188,9 @@ struct css_set {
 	/* the default cgroup associated with this css_set */
 	struct cgroup *dfl_cgrp;
 
+	/* internal task count, protected by css_set_lock */
+	int nr_tasks;
+
 	/*
 	 * Set of subsystem states, one for each subsystem. This array is
 	 * immutable after creation apart from the init_css_set during
@@ -226,6 +235,25 @@ struct css_set {
 	struct rcu_head rcu_head;
 };
 
+struct cgroup_freezer_state {
+	/* Should the cgroup and its descendants be frozen. */
+	bool freeze;
+
+	/* Should the cgroup actually be frozen? */
+	int e_freeze;
+
+	/* Fields below are protected by css_set_lock */
+
+	/* Number of frozen descendant cgroups */
+	int nr_frozen_descendants;
+
+	/*
+	 * Number of tasks, which are counted as frozen:
+	 * frozen, SIGSTOPped, and PTRACEd.
+	 */
+	int nr_frozen_tasks;
+};
+
 struct cgroup {
 	/* self css with NULL ->ss, points back to this cgroup */
 	struct cgroup_subsys_state self;
@@ -258,6 +286,9 @@ struct cgroup {
 	 */
 	int populated_cnt;
 
+	/* Number of descendant cgroups */
+	int nr_descendants;
+
 	struct kernfs_node *kn;		/* cgroup kernfs entry */
 	struct cgroup_file procs_file;	/* handle for "cgroup.procs" */
 	struct cgroup_file events_file;	/* handle for "cgroup.events" */
@@ -284,6 +315,9 @@ struct cgroup {
 	 * cgroup.  Protected by css_set_lock.
 	 */
 	struct list_head cset_links;
+
+	/* Used to store internal freezer state */
+	struct cgroup_freezer_state freezer;
 
 	/*
 	 * On the default hierarchy, a css_set for a cgroup with some
