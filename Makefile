@@ -653,6 +653,16 @@ KBUILD_CFLAGS	+= $(CLANG_FLAGS)
 KBUILD_AFLAGS	+= $(CLANG_FLAGS)
 endif
 
+# Make toolchain changes before including arch/$(SRCARCH)/Makefile to ensure
+# ar/cc/ld-* macros return correct values.
+ifdef CONFIG_LTO_CLANG
+# use llvm-ar for building symbol tables from IR files, and llvm-nm instead
+# of objdump for processing symbol versions and exports
+LLVM_AR		:= llvm-ar
+LLVM_NM		:= llvm-nm
+export LLVM_AR LLVM_NM
+endif
+
 # The arch Makefile can set ARCH_{CPP,A,C}FLAGS to override the default
 # values of the respective KBUILD_* variables
 ARCH_CPPFLAGS :=
@@ -777,6 +787,11 @@ endif
 # Use make W=1 to enable them (see scripts/Makefile.extrawarn)
 KBUILD_CFLAGS += $(call cc-disable-warning, unused-but-set-variable)
 
+ifdef CONFIG_LTO_CLANG
+# 4.4 原本不给链接阶段传 -O3，这里只在 LTO 时加，避免动到非 LTO 的已知可用构建
+LDFLAGS += -O3 --lto-O3
+endif
+
 KBUILD_CFLAGS += $(call cc-disable-warning, unused-const-variable)
 ifdef CONFIG_FRAME_POINTER
 KBUILD_CFLAGS	+= -fno-omit-frame-pointer -fno-optimize-sibling-calls
@@ -841,6 +856,47 @@ endif
 # We trigger additional mismatches with less inlining
 ifdef CONFIG_DEBUG_SECTION_MISMATCH
 KBUILD_CFLAGS += $(call cc-option, -fno-inline-functions-called-once)
+endif
+
+ifdef CONFIG_LTO_CLANG
+# 4.4 的 Kconfig 没有预处理器，也没有 CC_IS_CLANG / LD_IS_LLD 这两个符号
+# （4.19 是靠它们在 menu 里限制 LTO 的），所以这里在 Makefile 里把关。
+ifeq ($(cc-name),clang)
+ifeq ($(shell $(LD) --version 2>/dev/null | grep -c LLD),0)
+$(error CONFIG_LTO_CLANG 需要 ld.lld：请用 make LLVM=1 LLVM_IAS=1 ...)
+endif
+else
+$(error CONFIG_LTO_CLANG 需要 clang：请用 make LLVM=1 LLVM_IAS=1 ...)
+endif
+
+ifdef CONFIG_THINLTO
+lto-clang-flags	:= -flto=thin
+LDFLAGS		+= --thinlto-cache-dir=.thinlto-cache
+else
+lto-clang-flags	:= -flto
+endif
+lto-clang-flags += -fvisibility=default $(call cc-option, -fsplit-lto-unit)
+
+# Limit inlining across translation units to reduce binary size
+LD_FLAGS_LTO_CLANG := -mllvm -import-instr-limit=5
+
+LDFLAGS += $(LD_FLAGS_LTO_CLANG)
+KBUILD_LDFLAGS_MODULE += $(LD_FLAGS_LTO_CLANG)
+
+# 把 -fdata/-ffunction-sections 切出来的段合回去（见 scripts/module-lto.lds.S）
+KBUILD_LDFLAGS_MODULE += -T scripts/module-lto.lds
+
+# allow disabling only clang LTO where needed
+DISABLE_LTO_CLANG := -fno-lto
+export DISABLE_LTO_CLANG
+endif
+
+ifdef CONFIG_LTO
+LTO_CFLAGS	:= $(lto-clang-flags)
+KBUILD_CFLAGS	+= $(LTO_CFLAGS)
+
+DISABLE_LTO	:= $(DISABLE_LTO_CLANG)
+export LTO_CFLAGS DISABLE_LTO
 endif
 
 # arch Makefile may override CC so keep this after arch Makefile is included

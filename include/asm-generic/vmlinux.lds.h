@@ -211,8 +211,25 @@
  * with .data, but don't want to pull in .data..stuff which has its own
  * requirements. Same for bss.
  */
+/*
+ * LTO（-fdata/-ffunction-sections 总是开）会把 .data/.bss/.text 切成一个个带
+ * 后缀的段，需要额外的通配符收回去。非 LTO 构建不需要这些，而且加了会扰动
+ * 已经实机验证过的那条链接路径，所以只在 CONFIG_LTO_CLANG 下生效。
+ */
+#ifdef CONFIG_LTO_CLANG
+#define LTO_DATA_EXTRA	*(.data..L* .data..compoundliteral*)
+#define LTO_BSS_EXTRA	*(.bss..compoundliteral*)
+#define LTO_SBSS_EXTRA	*(.sbss.[0-9a-zA-Z_]*) *(.dynsbss)
+#define LTO_TEXT_EXTRA	.text.[0-9a-zA-Z_]*
+#else
+#define LTO_DATA_EXTRA
+#define LTO_BSS_EXTRA
+#define LTO_SBSS_EXTRA
+#define LTO_TEXT_EXTRA
+#endif
+
 #define DATA_DATA							\
-	*(.data .data.[0-9a-zA-Z_]*)					\
+	*(.data .data.[0-9a-zA-Z_]*) LTO_DATA_EXTRA					\
 	*(.ref.data)							\
 	*(.data..shared_aligned) /* percpu related */			\
 	MEM_KEEP(init.data)						\
@@ -448,7 +465,7 @@
 #define TEXT_TEXT							\
 		ALIGN_FUNCTION();					\
 		*(.text.hot .text.hot.*)				\
-		*(.text .text.fixup)					\
+		*(.text LTO_TEXT_EXTRA .text.fixup)					\
 		*(.text.unlikely .text.unlikely .text.*)			\
 		*(.text.unknown .text.unknown.*)			\
 		*(.ref.text)						\
@@ -601,7 +618,7 @@
 #define SBSS(sbss_align)						\
 	. = ALIGN(sbss_align);						\
 	.sbss : AT(ADDR(.sbss) - LOAD_OFFSET) {				\
-		*(.sbss)						\
+		*(.sbss) LTO_SBSS_EXTRA						\
 		*(.scommon)						\
 	}
 
@@ -619,7 +636,7 @@
 		BSS_FIRST_SECTIONS					\
 		*(.bss..page_aligned)					\
 		*(.dynbss)						\
-		*(.bss .bss.[0-9a-zA-Z_]*)				\
+		*(.bss .bss.[0-9a-zA-Z_]*) LTO_BSS_EXTRA				\
 		*(COMMON)						\
 	}
 

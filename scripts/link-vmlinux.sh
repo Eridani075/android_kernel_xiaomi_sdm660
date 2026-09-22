@@ -60,7 +60,40 @@ archive_builtin()
 		${AR} rcsTP${KBUILD_ARFLAGS} built-in.o			\
 					${KBUILD_VMLINUX_INIT}		\
 					${KBUILD_VMLINUX_MAIN}
+
+		# rebuild with llvm-ar to update the symbol table
+		if [ -n "${CONFIG_LTO_CLANG}" ]; then
+			mv -f built-in.o built-in.o.tmp
+			${LLVM_AR} rcsT${KBUILD_ARFLAGS} built-in.o $(${AR} t built-in.o.tmp)
+			rm -f built-in.o.tmp
+		fi
 	fi
+}
+
+# If CONFIG_LTO_CLANG is selected, generate a linker script to ensure correct
+# ordering of initcalls, and with CONFIG_MODVERSIONS also enabled, collect the
+# previously generated symbol versions into the same script.
+lto_lds()
+{
+	if [ -z "${CONFIG_LTO_CLANG}" ]; then
+		return
+	fi
+
+	${srctree}/scripts/generate_initcall_order.pl \
+		built-in.o ${KBUILD_VMLINUX_LIBS} \
+		> .tmp_lto.lds
+
+	if [ -n "${CONFIG_MODVERSIONS}" ]; then
+		for a in built-in.o ${KBUILD_VMLINUX_LIBS}; do
+			for o in $(${AR} t $a); do
+				if [ -f ${o}.symversions ]; then
+					cat ${o}.symversions >> .tmp_lto.lds
+				fi
+			done
+		done
+	fi
+
+	echo "-T .tmp_lto.lds"
 }
 
 # Link of vmlinux.o used for section mismatch analysis
@@ -83,7 +116,7 @@ modpost_link()
 			${KBUILD_VMLINUX_LIBS}				\
 			--end-group"
 	fi
-	${LD} ${LDFLAGS} -r -o ${1} ${objects}
+	${LD} ${LDFLAGS} -r -o ${1} $(lto_lds) ${objects}
 }
 
 # Link of vmlinux
@@ -95,7 +128,14 @@ vmlinux_link()
 	local objects
 
 	if [ "${SRCARCH}" != "um" ]; then
-		if [ -n "${CONFIG_THIN_ARCHIVES}" ]; then
+		if [ -n "${CONFIG_LTO_CLANG}" ]; then
+			# 已经做过 LTO 的部分链接，这里只喂 vmlinux.o，
+			# 否则每个 .tmp_vmlinuxN Pass 都会把全部 IR 重编一遍
+			objects="--start-group			\
+				vmlinux.o			\
+				--end-group			\
+				${@:2}"
+		elif [ -n "${CONFIG_THIN_ARCHIVES}" ]; then
 			objects="--whole-archive			\
 				built-in.o				\
 				--no-whole-archive			\
@@ -223,6 +263,7 @@ cleanup()
 	rm -f .old_version
 	rm -f .tmp_System.map
 	rm -f .tmp_kallsyms*
+	rm -f .tmp_lto.lds
 	rm -f .tmp_version
 	rm -f .tmp_vmlinux*
 	rm -f built-in.o
