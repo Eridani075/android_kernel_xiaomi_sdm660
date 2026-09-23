@@ -1532,6 +1532,12 @@ extern int ksu_handle_execveat(int *fd, struct filename **filename_ptr, void *ar
 			void *envp, int *flags);
 #endif
 
+#ifdef CONFIG_KSU_MANUAL_HOOK
+extern int ksu_handle_post_execveat(int *fd, struct filename **filename_ptr,
+				    void *argv, void *envp, int *flags,
+				    int *retval);
+#endif
+
 /*
  * sys_execve() executes a new program.
  */
@@ -1659,6 +1665,9 @@ static int do_execveat_common(int fd, struct filename *filename,
 	putname(filename);
 	if (displaced)
 		put_files_struct(displaced);
+#ifdef CONFIG_KSU_MANUAL_HOOK
+	ksu_handle_post_execveat(&fd, &filename, &argv, &envp, &flags, &retval);
+#endif
 	return retval;
 
 out:
