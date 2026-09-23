@@ -186,5 +186,5 @@ obj-$(CONFIG_SENSORS_SSC)	+= sensors/
 obj-$(CONFIG_ESOC)              += esoc/
 obj-$(CONFIG_TEE)		+= tee/
 
-# KernelSU
+# ReSukiSU (drivers/kernelsu is a symlink into the KernelSU/ clone next to this tree)
 obj-$(CONFIG_KSU)		+= kernelsu/

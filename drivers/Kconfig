@@ -214,6 +214,11 @@ source "drivers/sensors/Kconfig"
 
 source "drivers/tee/Kconfig"
 
+# ReSukiSU lives outside this tree: drivers/kernelsu is a symlink to
+# ../KernelSU/kernel, so clone ReSukiSU into KernelSU/ before configuring.
+# This is deliberately not a copy of the sources -- the driver's Kbuild derives its
+# version code from the git metadata next to it, which only makes sense for a real
+# ReSukiSU checkout (and it rejects a plain source copy outright).
 source "drivers/kernelsu/Kconfig"
 
 endmenu
